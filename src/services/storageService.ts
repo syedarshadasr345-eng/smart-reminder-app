@@ -268,8 +268,44 @@ export const DEFAULT_CONTEXT: SimulatedContext = {
 };
 
 class StorageService {
+  private memStore: Record<string, string> = {};
+
+  private getStoreItem(key: string): string | null {
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      try {
+        return localStorage.getItem(key);
+      } catch {
+        return this.memStore[key] || null;
+      }
+    }
+    return this.memStore[key] || null;
+  }
+
+  private setStoreItem(key: string, value: string): void {
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem(key, value);
+        return;
+      } catch {
+        // Fallback to memory
+      }
+    }
+    this.memStore[key] = value;
+  }
+
+  private clearStore(): void {
+    this.memStore = {};
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      try {
+        localStorage.clear();
+      } catch {
+        // Ignore
+      }
+    }
+  }
+
   getReminders(): ReminderItem[] {
-    const raw = localStorage.getItem(STORAGE_KEYS.REMINDERS);
+    const raw = this.getStoreItem(STORAGE_KEYS.REMINDERS);
     if (!raw) {
       this.saveReminders(INITIAL_REMINDERS);
       return INITIAL_REMINDERS;
@@ -282,11 +318,11 @@ class StorageService {
   }
 
   saveReminders(items: ReminderItem[]): void {
-    localStorage.setItem(STORAGE_KEYS.REMINDERS, JSON.stringify(items));
+    this.setStoreItem(STORAGE_KEYS.REMINDERS, JSON.stringify(items));
   }
 
   getPlaces(): Place[] {
-    const raw = localStorage.getItem(STORAGE_KEYS.PLACES);
+    const raw = this.getStoreItem(STORAGE_KEYS.PLACES);
     if (!raw) {
       this.savePlaces(DEFAULT_PLACES);
       return DEFAULT_PLACES;
@@ -299,11 +335,11 @@ class StorageService {
   }
 
   savePlaces(places: Place[]): void {
-    localStorage.setItem(STORAGE_KEYS.PLACES, JSON.stringify(places));
+    this.setStoreItem(STORAGE_KEYS.PLACES, JSON.stringify(places));
   }
 
   getPatterns(): UserSummaryPattern[] {
-    const raw = localStorage.getItem(STORAGE_KEYS.PATTERNS);
+    const raw = this.getStoreItem(STORAGE_KEYS.PATTERNS);
     if (!raw) {
       this.savePatterns(INITIAL_PATTERNS);
       return INITIAL_PATTERNS;
@@ -316,11 +352,11 @@ class StorageService {
   }
 
   savePatterns(patterns: UserSummaryPattern[]): void {
-    localStorage.setItem(STORAGE_KEYS.PATTERNS, JSON.stringify(patterns));
+    this.setStoreItem(STORAGE_KEYS.PATTERNS, JSON.stringify(patterns));
   }
 
   getSettings(): AppSettings {
-    const raw = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+    const raw = this.getStoreItem(STORAGE_KEYS.SETTINGS);
     if (!raw) {
       this.saveSettings(DEFAULT_SETTINGS);
       return DEFAULT_SETTINGS;
@@ -333,11 +369,11 @@ class StorageService {
   }
 
   saveSettings(settings: AppSettings): void {
-    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+    this.setStoreItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
   }
 
   getContext(): SimulatedContext {
-    const raw = localStorage.getItem(STORAGE_KEYS.CONTEXT);
+    const raw = this.getStoreItem(STORAGE_KEYS.CONTEXT);
     if (!raw) {
       this.saveContext(DEFAULT_CONTEXT);
       return DEFAULT_CONTEXT;
@@ -350,11 +386,11 @@ class StorageService {
   }
 
   saveContext(ctx: SimulatedContext): void {
-    localStorage.setItem(STORAGE_KEYS.CONTEXT, JSON.stringify(ctx));
+    this.setStoreItem(STORAGE_KEYS.CONTEXT, JSON.stringify(ctx));
   }
 
   getBatches(): NotificationBatch[] {
-    const raw = localStorage.getItem(STORAGE_KEYS.BATCHES);
+    const raw = this.getStoreItem(STORAGE_KEYS.BATCHES);
     if (!raw) return [];
     try {
       return JSON.parse(raw);
@@ -364,11 +400,56 @@ class StorageService {
   }
 
   saveBatches(batches: NotificationBatch[]): void {
-    localStorage.setItem(STORAGE_KEYS.BATCHES, JSON.stringify(batches));
+    this.setStoreItem(STORAGE_KEYS.BATCHES, JSON.stringify(batches));
+  }
+
+  updateReminder(updated: ReminderItem): void {
+    const list = this.getReminders();
+    const index = list.findIndex((r) => r.id === updated.id);
+    if (index !== -1) {
+      list[index] = updated;
+      this.saveReminders(list);
+    }
+  }
+
+  addPlace(place: Place): void {
+    const places = this.getPlaces();
+    places.push(place);
+    this.savePlaces(places);
+  }
+
+  deletePlace(placeId: string): void {
+    const places = this.getPlaces().filter((p) => p.id !== placeId);
+    this.savePlaces(places);
+  }
+
+  exportBackup(): string {
+    const data = {
+      version: 1,
+      exported_at: new Date().toISOString(),
+      reminders: this.getReminders(),
+      places: this.getPlaces(),
+      patterns: this.getPatterns(),
+      settings: this.getSettings(),
+    };
+    return JSON.stringify(data, null, 2);
+  }
+
+  importBackup(jsonString: string): boolean {
+    try {
+      const data = JSON.parse(jsonString);
+      if (Array.isArray(data.reminders)) this.saveReminders(data.reminders);
+      if (Array.isArray(data.places)) this.savePlaces(data.places);
+      if (Array.isArray(data.patterns)) this.savePatterns(data.patterns);
+      if (data.settings && typeof data.settings === 'object') this.saveSettings(data.settings);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   resetToDefault(): void {
-    localStorage.clear();
+    this.clearStore();
     this.saveReminders(INITIAL_REMINDERS);
     this.savePlaces(DEFAULT_PLACES);
     this.savePatterns(INITIAL_PATTERNS);

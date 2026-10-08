@@ -64,6 +64,41 @@ class AudioService {
       // Audio playback fails silently if browser policy blocks autoplay
     }
   }
+
+  unlockAudio() {
+    try {
+      const ctx = this.getContext();
+      if (ctx && ctx.state === 'suspended') {
+        ctx.resume();
+      }
+    } catch {
+      // Ignore
+    }
+  }
+
+  triggerHaptic(type: 'light' | 'medium' | 'success' | 'alert' = 'light') {
+    if (typeof window === 'undefined' || !('navigator' in window) || !navigator.vibrate) {
+      return;
+    }
+    try {
+      switch (type) {
+        case 'light':
+          navigator.vibrate(12);
+          break;
+        case 'medium':
+          navigator.vibrate(28);
+          break;
+        case 'success':
+          navigator.vibrate([15, 40, 20]);
+          break;
+        case 'alert':
+          navigator.vibrate([60, 50, 70]);
+          break;
+      }
+    } catch {
+      // Haptics unsupported or disabled by OS
+    }
+  }
 }
 
 export const audioService = new AudioService();

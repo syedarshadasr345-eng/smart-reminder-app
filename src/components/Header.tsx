@@ -1,26 +1,27 @@
 import React from 'react';
-import { Sparkles, Settings, Smartphone, Maximize2, Bell } from 'lucide-react';
+import { Sparkles, Settings, Smartphone, Monitor, Maximize2, Bell } from 'lucide-react';
+import { audioService } from '../services/audioService';
 
 interface HeaderProps {
   onOpenHabits: () => void;
   onOpenSettings: () => void;
-  isExpanded: boolean;
-  onToggleExpanded: () => void;
+  viewMode: 'frame' | 'mobile' | 'expanded';
+  onCycleViewMode: () => void;
   unreadAlertCount: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   onOpenHabits,
   onOpenSettings,
-  isExpanded,
-  onToggleExpanded,
+  viewMode,
+  onCycleViewMode,
   unreadAlertCount,
 }) => {
   return (
     <header className="app-header">
       <div className="brand-badge">
         <div className="brand-logo-icon" style={{ position: 'relative' }}>
-          <Bell size={20} />
+          <Bell size={19} />
           {unreadAlertCount > 0 && (
             <span
               style={{
@@ -38,33 +39,51 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
         <div>
           <h1 className="brand-title">Smart Reminder</h1>
-          <p className="brand-subtitle">Context & Habit-Aware</p>
+          <p className="brand-subtitle">Context & Habit AI</p>
         </div>
       </div>
 
       <div className="header-actions">
         <button
+          type="button"
           className="icon-btn"
           title="Habit Profile & Learned Patterns"
-          onClick={onOpenHabits}
+          onClick={() => {
+            audioService.triggerHaptic('light');
+            onOpenHabits();
+          }}
         >
-          <Sparkles size={17} color="#c084fc" />
+          <Sparkles size={16} color="#c084fc" />
         </button>
 
         <button
+          type="button"
           className="icon-btn"
           title="App Settings & Quiet Hours"
-          onClick={onOpenSettings}
+          onClick={() => {
+            audioService.triggerHaptic('light');
+            onOpenSettings();
+          }}
         >
-          <Settings size={17} />
+          <Settings size={16} />
         </button>
 
         <button
+          type="button"
           className="icon-btn"
-          title={isExpanded ? 'Mobile View' : 'Expanded View'}
-          onClick={onToggleExpanded}
+          title={`View Mode: ${viewMode}. Click to toggle (Phone Frame / Mobile Screen / Expanded)`}
+          onClick={() => {
+            audioService.triggerHaptic('medium');
+            onCycleViewMode();
+          }}
         >
-          {isExpanded ? <Smartphone size={17} /> : <Maximize2 size={17} />}
+          {viewMode === 'frame' ? (
+            <Smartphone size={16} />
+          ) : viewMode === 'mobile' ? (
+            <Maximize2 size={16} />
+          ) : (
+            <Monitor size={16} />
+          )}
         </button>
       </div>
     </header>

@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Mic, Send, MapPin, Clock, AlertCircle, Check } from 'lucide-react';
 import type { Place, PriorityLevel, ReminderCategory, TriggerType } from '../types';
 import { parserService } from '../services/parserService';
 import type { ParsedReminderResult } from '../services/parserService';
+import { audioService } from '../services/audioService';
 
 interface CaptureBarProps {
   places: Place[];
@@ -19,21 +20,19 @@ interface CaptureBarProps {
 export const CaptureBar: React.FC<CaptureBarProps> = ({ places, onAddReminder }) => {
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
-  const [liveParsed, setLiveParsed] = useState<ParsedReminderResult | null>(null);
   const recognitionRef = useRef<any>(null);
 
-  // Real-time live preview of natural language parsing
-  useEffect(() => {
-    if (!inputText.trim()) {
-      setLiveParsed(null);
-      return;
-    }
-    const result = parserService.parseLocal(inputText, places);
-    setLiveParsed(result);
+  // Real-time live preview of natural language parsing (computed during render)
+  const liveParsed = useMemo<ParsedReminderResult | null>(() => {
+    if (!inputText.trim()) return null;
+    return parserService.parseLocal(inputText, places);
   }, [inputText, places]);
 
   // Handle Speech Recognition (Web Speech API)
   const toggleVoiceRecording = () => {
+    audioService.unlockAudio();
+    audioService.triggerHaptic('medium');
+
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
@@ -88,6 +87,9 @@ export const CaptureBar: React.FC<CaptureBarProps> = ({ places, onAddReminder })
     if (e) e.preventDefault();
     if (!inputText.trim()) return;
 
+    audioService.unlockAudio();
+    audioService.triggerHaptic('success');
+
     const parsed = liveParsed || parserService.parseLocal(inputText, places);
 
     onAddReminder({
@@ -100,10 +102,10 @@ export const CaptureBar: React.FC<CaptureBarProps> = ({ places, onAddReminder })
     });
 
     setInputText('');
-    setLiveParsed(null);
   };
 
   const handleApplyExample = (text: string) => {
+    audioService.triggerHaptic('light');
     setInputText(text);
   };
 

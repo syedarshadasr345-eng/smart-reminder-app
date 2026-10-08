@@ -99,7 +99,10 @@ export interface AppSettings {
   quiet_hours_end: string; // e.g. "07:30"
   morning_brief_time: string; // e.g. "08:00"
   sound_enabled: boolean;
+  haptic_enabled?: boolean;
   ai_provider: 'local_smart_parser' | 'gemini' | 'claude';
   gemini_api_key?: string;
   claude_api_key?: string;
 }
+
+export type AppTab = 'reminders' | 'capture' | 'radar' | 'habits' | 'settings';
